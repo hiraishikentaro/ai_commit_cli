@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Debug)]
 pub struct GeminiRequest {
     contents: Vec<GeminiContent>,
-    generationConfig: GeminiGenerationConfig,
+    generation_config: GeminigenerationConfig,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -20,8 +20,8 @@ pub struct GeminiPart {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct GeminiGenerationConfig {
-    maxOutputTokens: u32,
+pub struct GeminigenerationConfig {
+    max_output_tokens: u32,
 }
 
 #[derive(Deserialize, Debug)]
@@ -56,8 +56,8 @@ pub async fn call_api(
                 text: combined_prompt,
             }],
         }],
-        generationConfig: GeminiGenerationConfig {
-            maxOutputTokens: 1000,
+        generation_config: GeminigenerationConfig {
+            max_output_tokens: 1000,
         },
     };
 
