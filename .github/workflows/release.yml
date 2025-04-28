@@ -33,6 +33,43 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate Release Notes
+        if: matrix.job.target == 'x86_64-unknown-linux-gnu'
+        id: release_notes
+        run: |
+          # Get the latest tag
+          LATEST_TAG=$(git describe --tags --abbrev=0)
+
+          # Get the previous tag
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^)
+
+          # Generate changelog
+          echo "CHANGELOG" > RELEASE_NOTES.md
+          echo "==========" >> RELEASE_NOTES.md
+          echo "" >> RELEASE_NOTES.md
+
+          if [ "$PREVIOUS_TAG" != "" ]; then
+            # If there is a previous tag, list changes since then
+            echo "Changes since $PREVIOUS_TAG:" >> RELEASE_NOTES.md
+            git log --pretty=format:"* %s" $PREVIOUS_TAG..$LATEST_TAG >> RELEASE_NOTES.md
+          else
+            # If this is the first tag, list all changes
+            echo "Initial release changes:" >> RELEASE_NOTES.md
+            git log --pretty=format:"* %s" $LATEST_TAG >> RELEASE_NOTES.md
+          fi
+
+          echo "" >> RELEASE_NOTES.md
+          echo "" >> RELEASE_NOTES.md
+          echo "## Installation" >> RELEASE_NOTES.md
+          echo "" >> RELEASE_NOTES.md
+          echo "You can install via Homebrew:" >> RELEASE_NOTES.md
+          echo '```bash' >> RELEASE_NOTES.md
+          echo "brew tap hiraishikentaro/ai_commit_cli" >> RELEASE_NOTES.md
+          echo "brew install ai_commit_cli" >> RELEASE_NOTES.md
+          echo '```' >> RELEASE_NOTES.md
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -51,46 +88,14 @@ jobs:
           brew install openssl@3
 
       - name: Build target
-        run: |
-          # Show Rust and cargo information
-          rustc --version
-          cargo --version
-          rustup show
-
-          # Show current directory structure
-          echo "Current directory structure:"
-          ls -la
-
-          # Build with verbose output
-          cargo build --release --target ${{ matrix.job.target }} -vv
-
-          # Show target directory structure after build
-          echo "Target directory structure after build:"
-          ls -R target/
-
-      - name: Check binary
-        shell: bash
-        run: |
-          echo "Checking binary location..."
-          ls -la target/${{ matrix.job.target }}/release/
-          echo "Binary details:"
-          file target/${{ matrix.job.target }}/release/${{ env.PROJECT_NAME }} || true
+        run: cargo build --release --target ${{ matrix.job.target }}
 
       - name: Rename artifacts
         shell: bash
         run: |
           SOURCE="target/${{ matrix.job.target }}/release/${{ env.PROJECT_NAME }}"
           DEST="target/${{ matrix.job.target }}/release/ai_commit_cli-${{ github.ref_name }}-${{ matrix.job.target }}${{ matrix.job.extension }}"
-
-          if [ -f "$SOURCE" ]; then
-            echo "Found binary at $SOURCE"
-            mv "$SOURCE" "$DEST"
-          else
-            echo "Error: Binary not found at $SOURCE"
-            echo "Contents of release directory:"
-            ls -la target/${{ matrix.job.target }}/release/
-            exit 1
-          fi
+          mv "$SOURCE" "$DEST"
 
       - name: Release
         uses: softprops/action-gh-release@v1
@@ -99,3 +104,5 @@ jobs:
         with:
           files: |
             target/${{ matrix.job.target }}/release/ai_commit_cli-${{ github.ref_name }}-${{ matrix.job.target }}${{ matrix.job.extension }}
+          body_path: RELEASE_NOTES.md
+          generate_release_notes: true
