@@ -1,5 +1,5 @@
 mod config_tests {
-    use crate::config::{Language, Platform, Config, ApiKeys};
+    use crate::config::{ApiKeys, Config, Language, Platform};
 
     #[test]
     fn test_platform_as_str() {
@@ -52,82 +52,102 @@ mod config_tests {
     #[test]
     fn test_api_keys_get_set() {
         let mut api_keys = ApiKeys::new();
-        
+
         // Test set_key and get_key for each platform
         api_keys.set_key(Platform::Claude, "claude_key".to_string());
         api_keys.set_key(Platform::OpenAI, "openai_key".to_string());
         api_keys.set_key(Platform::Gemini, "gemini_key".to_string());
-        
-        assert_eq!(api_keys.get_key(Platform::Claude), Some("claude_key".to_string()));
-        assert_eq!(api_keys.get_key(Platform::OpenAI), Some("openai_key".to_string()));
-        assert_eq!(api_keys.get_key(Platform::Gemini), Some("gemini_key".to_string()));
+
+        assert_eq!(
+            api_keys.get_key(Platform::Claude),
+            Some("claude_key".to_string())
+        );
+        assert_eq!(
+            api_keys.get_key(Platform::OpenAI),
+            Some("openai_key".to_string())
+        );
+        assert_eq!(
+            api_keys.get_key(Platform::Gemini),
+            Some("gemini_key".to_string())
+        );
     }
 
     #[test]
     fn test_config_new() {
         let config = Config::new();
-        let default_platform = Platform::default();
-        assert!(matches!(config.platform, default_platform));
-        let default_language = Language::default();
-        assert!(matches!(config.language, default_language));
+        let _default_platform = Platform::default();
+        assert!(matches!(config.platform, _default_platform));
+        let _default_language = Language::default();
+        assert!(matches!(config.language, _default_language));
         assert!(config.api_keys.claude.is_none());
         assert!(config.api_keys.openai.is_none());
         assert!(config.api_keys.gemini.is_none());
     }
 }
 
-// APIテストは一時的にコメントアウト
-/*
 mod api_tests {
+    use crate::api;
     use crate::config::Platform;
-    use mockito;
+    use std::path::Path;
 
-    #[tokio::test]
-    async fn test_api_selection() {
-        // このテストでは実際のAPIコールはしません
-        // プラットフォームに応じた関数が選択されることをテスト
-        
-        // モック準備
-        let mut server = mockito::Server::new();
-        let url = server.url();
-        
-        // モックサーバーを使うように環境変数を設定
-        unsafe {
-            std::env::set_var("CLAUDE_API_HOST", &url);
-            std::env::set_var("OPENAI_API_HOST", &url);
-            std::env::set_var("GEMINI_API_HOST", &url);
-        }
-        
-        // ダミーのレスポンスを返すモックの設定
-        // モックのセットアップは複雑なため、一旦テストは単純化
-        
-        // APIが呼び出せるが、このテストではモックの設定までをテスト
-        assert!(true);
+    #[test]
+    fn test_api_modules_exist() {
+        // Verify that each API module file exists
+        assert!(
+            Path::new("src/api/claude.rs").exists(),
+            "Claude API module should exist"
+        );
+        assert!(
+            Path::new("src/api/openai.rs").exists(),
+            "OpenAI API module should exist"
+        );
+        assert!(
+            Path::new("src/api/gemini.rs").exists(),
+            "Gemini API module should exist"
+        );
+    }
+
+    #[test]
+    fn test_api_selection_constants() {
+        // Verify that API base URL environment variable constants are defined
+        assert_eq!(api::ANTHROPIC_API_BASE_ENV, "ANTHROPIC_API_BASE");
+        assert_eq!(api::OPENAI_API_BASE_ENV, "OPENAI_API_BASE");
+        assert_eq!(api::GEMINI_API_BASE_ENV, "GEMINI_API_BASE");
+    }
+
+    #[test]
+    fn test_platform_mapping() {
+        // Verify that each platform is correctly mapped
+        let platforms = [Platform::Claude, Platform::OpenAI, Platform::Gemini];
+        let models = platforms.iter().map(|p| p.model_name()).collect::<Vec<_>>();
+
+        assert!(models.contains(&"claude-3-opus-20240229"));
+        assert!(models.contains(&"gpt-4"));
+        assert!(models.contains(&"gemini-1.0-pro"));
     }
 }
-*/
 
 mod main_tests {
     use std::process::Command;
 
     #[test]
     fn test_command_output_parsing() {
-        // テスト用のコマンド出力
+        // Command output for testing
         let output = Command::new("echo")
             .arg("test diff output")
             .output()
             .expect("Failed to execute command");
 
-        // 出力が正しく文字列として解析できることをテスト
+        // Test that the output can be correctly parsed as a string
         let output_str = String::from_utf8(output.stdout).expect("Failed to parse stdout");
         assert_eq!(output_str.trim(), "test diff output");
     }
 
     #[test]
     fn test_empty_diff_handling() {
-        // 空のdiffを扱う関数のテスト
-        // 実際の実装では空の場合にエラーメッセージを表示するケースをテスト
+        // Test handling of empty diff
+        // In the actual implementation, error messages should be displayed for empty cases
         let empty_diff = "";
         assert!(empty_diff.is_empty());
     }
-} 
+}

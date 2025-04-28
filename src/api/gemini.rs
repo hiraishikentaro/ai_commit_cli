@@ -1,11 +1,13 @@
 use anyhow::{Result, anyhow};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
+use std::env;
+use crate::api::GEMINI_API_BASE_ENV;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct GeminiRequest {
     contents: Vec<GeminiContent>,
-    generation_config: GeminigenerationConfig,
+    generation_config: GeminiGenerationConfig,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -20,7 +22,7 @@ pub struct GeminiPart {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct GeminigenerationConfig {
+pub struct GeminiGenerationConfig {
     max_output_tokens: u32,
 }
 
@@ -41,9 +43,14 @@ pub async fn call_api(
     user_prompt: &str,
 ) -> Result<String> {
     let client = Client::new();
+    
+    // ベースURLを環境変数から取得（テスト用）
+    let base_url = env::var(GEMINI_API_BASE_ENV)
+        .unwrap_or_else(|_| "https://generativelanguage.googleapis.com".to_string());
+    
     let url = format!(
-        "https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent?key={}",
-        model, api_key
+        "{}/v1/models/{}:generateContent?key={}",
+        base_url, model, api_key
     );
 
     // Geminiはシステムプロンプトとユーザープロンプトを結合する
@@ -56,7 +63,7 @@ pub async fn call_api(
                 text: combined_prompt,
             }],
         }],
-        generation_config: GeminigenerationConfig {
+        generation_config: GeminiGenerationConfig {
             max_output_tokens: 1000,
         },
     };

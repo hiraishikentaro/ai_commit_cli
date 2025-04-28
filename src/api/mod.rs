@@ -5,6 +5,11 @@ pub mod openai;
 use crate::config::Platform;
 use anyhow::Result;
 
+// ベースURLの環境変数名を定義（テスト用）
+pub const ANTHROPIC_API_BASE_ENV: &str = "ANTHROPIC_API_BASE";
+pub const OPENAI_API_BASE_ENV: &str = "OPENAI_API_BASE";
+pub const GEMINI_API_BASE_ENV: &str = "GEMINI_API_BASE";
+
 pub async fn generate_commit_message(
     platform: Platform,
     api_key: &str,
