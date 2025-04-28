@@ -1,8 +1,8 @@
 # AI Commit CLI
 
-[![Rust](https://github.com/yourusername/ai_commit_cli/actions/workflows/rust.yml/badge.svg)](https://github.com/yourusername/ai_commit_cli/actions/workflows/rust.yml)
+A [Rust](https://www.rust-lang.org/) CLI tool that analyzes staged Git changes and automatically generates optimal commit messages using AI.
 
-A Rust CLI tool that analyzes staged Git changes and automatically generates optimal commit messages using AI.
+[![Changelog](https://img.shields.io/badge/changelog-v0.0.1-green.svg)](https://github.com/hiraishikentaro/ai_commit_cli/blob/master/CHANGELOG.md)
 
 ## Supported AI Platforms
 
@@ -18,6 +18,8 @@ A Rust CLI tool that analyzes staged Git changes and automatically generates opt
 
 ## Installation
 
+### From Source
+
 1. Clone the repository:
 
    ```
@@ -25,12 +27,20 @@ A Rust CLI tool that analyzes staged Git changes and automatically generates opt
    cd ai_commit_cli
    ```
 
-2. Set up your API key:
+2. Install using Cargo:
+
+   ```
+   cargo install --path .
+   ```
+
+   This will install the `aic` command to your system.
+
+3. Set up your API key:
 
    - Using the interactive command:
 
      ```
-     ai_commit_cli config --api
+     aic config --api
      ```
 
    - Or using environment variables:
@@ -46,30 +56,19 @@ A Rust CLI tool that analyzes staged Git changes and automatically generates opt
      export GEMINI_API_KEY=your_gemini_api_key_here
      ```
 
-3. Build the tool:
-
-   ```
-   cargo build --release
-   ```
-
-4. Create a symbolic link to the executable (optional):
-   ```
-   ln -s $(pwd)/target/release/ai_commit_cli /usr/local/bin/
-   ```
-
 ## Usage
 
 ### Configuration
 
 ```
 # Set AI platform and API key (interactive)
-ai_commit_cli config --api
+aic config --api
 
 # Set language for commit messages (interactive)
-ai_commit_cli config --language
+aic config --language
 
 # Show current configuration
-ai_commit_cli config --show
+aic config --show
 ```
 
 ### Platform Selection
@@ -85,7 +84,7 @@ Using the config command, you can choose from the following AI platforms:
 You can set the language for commit messages with:
 
 ```
-ai_commit_cli config --language
+aic config --language
 ```
 
 Available language options:
@@ -105,16 +104,16 @@ Available language options:
 2. Generate a commit message:
 
    ```
-   ai_commit_cli
+   aic
    ```
 
 3. Automatically commit with the generated message:
    ```
-   ai_commit_cli --commit
+   aic --commit
    ```
    or
    ```
-   ai_commit_cli -c
+   aic -c
    ```
 
 ## API Key Priority

@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, Read, Write};
 use std::path::PathBuf;
+use crate::language::Language;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]
 pub enum Platform {
@@ -40,67 +41,6 @@ impl Platform {
 impl Default for Platform {
     fn default() -> Self {
         Platform::Claude
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
-pub enum Language {
-    Japanese,
-    English,
-    Chinese,
-}
-
-impl Language {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            Language::Japanese => "Japanese",
-            Language::English => "English",
-            Language::Chinese => "Chinese",
-        }
-    }
-
-    pub fn system_prompt(&self) -> &'static str {
-        match self {
-            Language::Japanese => "あなたは優れたコミットメッセージを作成するエキスパートです。以下のGitの差分に基づいて、以下のフォーマットに従ったコンパクトで明確なコミットメッセージを生成してください。
-```
-フォーマット:
-<変更の要約（50文字以内が望ましい）> \n\n
-<必要に応じて変更の詳細な説明（各行72文字以内が望ましい>
-
-良いコミットメッセージの特徴:
-1. 簡潔で明確
-2. 何が変更されたかではなく「なぜ」変更されたかを説明
-3. 関連する課題やバグ修正への参照を含める
-```
-コミットメッセージは日本語で生成してください。",
-            Language::English => "You are an expert at creating commit messages. Based on the following Git diff, generate a compact and clear commit message following the format below.
-```
-Format:
-<Summary of the change (preferably under 50 characters)> \n\n
-<Detailed explanation of the change if necessary (each line preferably under 72 characters)>
-
-Characteristics of a good commit message:
-1. Concise and clear
-2. Explains 'why' the change was made, not just what was changed
-3. Includes references to related issues or bug fixes
-```
-Please generate the commit message in English.",
-            Language::Chinese => "You are an expert at creating commit messages. Based on the following Git diff, generate a compact and clear commit message following the format below.
-
-```
-Format:
-<Summary of the change (preferably under 50 characters)> \n\n
-<Detailed explanation of the change if necessary (each line preferably under 72 characters)>
-```
-
-Please generate the commit message in Chinese.",
-        }
-    }
-}
-
-impl Default for Language {
-    fn default() -> Self {
-        Language::Japanese
     }
 }
 
@@ -214,29 +154,6 @@ pub fn get_config_path() -> Result<PathBuf> {
         .join("config.json"))
 }
 
-// 対話式の選択機能 - 言語
-pub fn select_language() -> Result<Language> {
-    println!("Select language for commit messages:");
-    println!("JA. Japanese (日本語)");
-    println!("EN. English");
-    println!("CN. Chinese");
-    print!("Enter your choice (JA/EN/CN): ");
-    io::stdout().flush()?;
-
-    let mut input = String::new();
-    io::stdin().read_line(&mut input)?;
-
-    match input.trim() {
-        "JA" => Ok(Language::Japanese),
-        "EN" => Ok(Language::English),
-        "CN" => Ok(Language::Chinese),
-        _ => {
-            println!("Invalid choice. Using default (Japanese).");
-            Ok(Language::Japanese)
-        }
-    }
-}
-
 // 対話式の選択機能 - プラットフォーム
 pub fn select_platform() -> Result<Platform> {
     println!("Select AI platform:");
@@ -260,92 +177,66 @@ pub fn select_platform() -> Result<Platform> {
     }
 }
 
-// 対話式の入力機能 - APIキー
 pub fn input_api_key(platform: Platform) -> Result<String> {
-    println!("Enter your {} API key:", platform.as_str());
-    print!("> ");
+    print!("Enter {} API key: ", platform.as_str());
     io::stdout().flush()?;
 
-    let mut input = String::new();
-    io::stdin().read_line(&mut input)?;
-
-    let api_key = input.trim().to_string();
-    if api_key.is_empty() {
-        return Err(anyhow!("API key cannot be empty"));
-    }
-
-    Ok(api_key)
+    let mut api_key = String::new();
+    io::stdin().read_line(&mut api_key)?;
+    Ok(api_key.trim().to_string())
 }
 
 pub async fn handle_config_command(api: &bool, show: &bool, language: &bool) -> Result<()> {
     let mut config = Config::load()?;
 
-    if *api {
-        // プラットフォームを選択
-        let platform = select_platform()?;
-
-        // APIキーを入力
-        let api_key = input_api_key(platform)?;
-
-        // 設定を保存
-        config.api_keys.set_key(platform, api_key);
-        config.platform = platform; // デフォルトのプラットフォームも更新
-        config.save()?;
-
-        println!("{} API key has been set successfully.", platform.as_str());
+    if *show {
+        println!("Current configuration:");
+        println!("Language: {}", config.language.as_str());
+        println!("Platform: {}", config.platform.as_str());
+        println!(
+            "Claude API key: {}",
+            if config.api_keys.claude.is_some() {
+                "Set"
+            } else {
+                "Not set"
+            }
+        );
+        println!(
+            "OpenAI API key: {}",
+            if config.api_keys.openai.is_some() {
+                "Set"
+            } else {
+                "Not set"
+            }
+        );
+        println!(
+            "Gemini API key: {}",
+            if config.api_keys.gemini.is_some() {
+                "Set"
+            } else {
+                "Not set"
+            }
+        );
+        return Ok(());
     }
 
     if *language {
-        let selected_language = select_language()?;
-        config.language = selected_language;
+        // 言語選択
+        config.language = crate::language::select_language()?;
+        println!("Language set to: {}", config.language.as_str());
         config.save()?;
-        println!("Language has been set to: {}", selected_language.as_str());
     }
 
-    if *show || (!*api && !*language) {
-        println!("Current configuration:");
-        println!("Active platform: {}", config.platform.as_str());
+    if *api {
+        // プラットフォーム選択
+        config.platform = select_platform()?;
+        println!("Platform set to: {}", config.platform.as_str());
 
-        // 各プラットフォームのAPIキー状態を表示
-        println!("API Keys:");
-
-        // Claude
-        if let Some(key) = &config.api_keys.claude {
-            let masked_key = if key.len() > 8 {
-                format!("{}********", &key[0..8])
-            } else {
-                "********".to_string()
-            };
-            println!("  Claude API Key: {}", masked_key);
-        } else {
-            println!("  Claude API Key: not set");
-        }
-
-        // OpenAI
-        if let Some(key) = &config.api_keys.openai {
-            let masked_key = if key.len() > 8 {
-                format!("{}********", &key[0..8])
-            } else {
-                "********".to_string()
-            };
-            println!("  OpenAI API Key: {}", masked_key);
-        } else {
-            println!("  OpenAI API Key: not set");
-        }
-
-        // Gemini
-        if let Some(key) = &config.api_keys.gemini {
-            let masked_key = if key.len() > 8 {
-                format!("{}********", &key[0..8])
-            } else {
-                "********".to_string()
-            };
-            println!("  Gemini API Key: {}", masked_key);
-        } else {
-            println!("  Gemini API Key: not set");
-        }
-
-        println!("Language: {}", config.language.as_str());
+        // APIキー入力
+        let api_key = input_api_key(config.platform)?;
+        config.api_keys.set_key(config.platform, api_key);
+        println!("{} API key set successfully", config.platform.as_str());
+        config.save()?;
     }
 
     Ok(())

@@ -1,5 +1,6 @@
 mod config_tests {
-    use crate::config::{ApiKeys, Config, Language, Platform};
+    use crate::config::{ApiKeys, Config, Platform};
+    use crate::language::Language;
 
     #[test]
     fn test_platform_as_str() {

@@ -6,13 +6,14 @@ use tokio;
 
 mod api;
 mod config;
+mod language;
 use config::Config;
 
 #[cfg(test)]
 mod tests;
 
 #[derive(Parser, Debug)]
-#[command(author, version, about = "Generate commit messages using AI")]
+#[command(author, version, about = "Generate commit messages using AI", bin_name = "aic")]
 struct Args {
     #[command(subcommand)]
     command: Option<Commands>,
@@ -66,15 +67,15 @@ async fn generate_commit_message(diff: &str) -> Result<String> {
     // システムプロンプトと言語に応じたユーザープロンプトを取得
     let system_prompt = language.system_prompt();
     let user_prompt = match language {
-        config::Language::Japanese => format!(
+        language::Language::Japanese => format!(
             "以下のGit差分に基づいてコミットメッセージを生成してください：\n\n```\n{}\n```",
             diff
         ),
-        config::Language::English => format!(
+        language::Language::English => format!(
             "Generate a commit message based on the following Git diff:\n\n```\n{}\n```",
             diff
         ),
-        config::Language::Chinese => format!("根据以下Git差异生成提交消息：\n\n```\n{}\n```", diff),
+        language::Language::Chinese => format!("根据以下Git差异生成提交消息：\n\n```\n{}\n```", diff),
     };
 
     // APIモジュールを使用してコミットメッセージを生成

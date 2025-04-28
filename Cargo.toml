@@ -3,6 +3,10 @@ name = "ai_commit_cli"
 version = "0.0.1"
 edition = "2024"
 
+[[bin]]
+name = "aic"
+path = "src/main.rs"
+
 [dependencies]
 tokio = { version = "1", features = ["full"] } # 非同期ランタイム
 reqwest = { version = "0.12", features = ["json"] } # HTTPクライアント
