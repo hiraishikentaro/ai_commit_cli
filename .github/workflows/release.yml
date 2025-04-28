@@ -5,36 +5,45 @@ on:
     tags:
       - "v*"
 
+permissions:
+  contents: write
+  discussions: write
+  pull-requests: write
+
 jobs:
   create-release:
     runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
     steps:
       - uses: actions/checkout@v4
       - name: Create Release
         id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
           draft: false
           prerelease: false
+          generate_release_notes: true
 
   build-release:
     needs: create-release
     name: Build Release (${{ matrix.target }})
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
     strategy:
       fail-fast: false
       matrix:
         include:
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
+            cross: false
           - target: x86_64-apple-darwin
             os: macos-latest
+            cross: false
           - target: aarch64-apple-darwin
             os: macos-latest
+            cross: true
 
     steps:
       - uses: actions/checkout@v4
@@ -44,8 +53,31 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
+      - name: Install dependencies (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config libssl-dev
+
+      - name: Install dependencies (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew install openssl@3
+
+      - name: Setup cross-compilation for Apple Silicon
+        if: matrix.cross
+        run: |
+          rustup target add aarch64-apple-darwin
+
       - name: Build target
-        run: cargo build --release --target ${{ matrix.target }}
+        run: |
+          # Set SDKROOT for macOS builds
+          if [[ "${{ matrix.os }}" == "macos-latest" ]]; then
+            export SDKROOT=$(xcrun -sdk macosx --show-sdk-path)
+          fi
+
+          # Build the target
+          cargo build --release --target ${{ matrix.target }}
 
       - name: Prepare archive
         shell: bash
@@ -54,25 +86,12 @@ jobs:
           mkdir -p "$staging"
 
           # Copy the binary
-          if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            cp "target/${{ matrix.target }}/release/ai_commit_cli.exe" "$staging/"
-          else
-            cp "target/${{ matrix.target }}/release/ai_commit_cli" "$staging/"
-          fi
+          cp "target/${{ matrix.target }}/release/ai_commit_cli" "$staging/"
 
           # Create archive
-          if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            7z a "$staging.zip" "$staging"
-          else
-            tar czf "$staging.tar.gz" "$staging"
-          fi
+          tar czf "$staging.tar.gz" "$staging"
 
       - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v1
         with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ai_commit_cli-${{ matrix.target }}.tar.gz
-          asset_name: ai_commit_cli-${{ matrix.target }}.tar.gz
-          asset_content_type: application/gzip
+          files: ai_commit_cli-${{ matrix.target }}.tar.gz
