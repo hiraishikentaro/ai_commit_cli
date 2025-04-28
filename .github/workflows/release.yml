@@ -52,14 +52,45 @@ jobs:
 
       - name: Build target
         run: |
-          cargo build --release --target ${{ matrix.job.target }}
+          # Show Rust and cargo information
+          rustc --version
+          cargo --version
+          rustup show
+
+          # Show current directory structure
+          echo "Current directory structure:"
+          ls -la
+
+          # Build with verbose output
+          cargo build --release --target ${{ matrix.job.target }} -vv
+
+          # Show target directory structure after build
+          echo "Target directory structure after build:"
+          ls -R target/
+
+      - name: Check binary
+        shell: bash
+        run: |
+          echo "Checking binary location..."
+          ls -la target/${{ matrix.job.target }}/release/
+          echo "Binary details:"
+          file target/${{ matrix.job.target }}/release/${{ env.PROJECT_NAME }} || true
 
       - name: Rename artifacts
         shell: bash
         run: |
           SOURCE="target/${{ matrix.job.target }}/release/${{ env.PROJECT_NAME }}"
           DEST="target/${{ matrix.job.target }}/release/${{ env.PROJECT_NAME }}-${{ github.ref_name }}-${{ matrix.job.target }}${{ matrix.job.extension }}"
-          mv "$SOURCE" "$DEST"
+
+          if [ -f "$SOURCE" ]; then
+            echo "Found binary at $SOURCE"
+            mv "$SOURCE" "$DEST"
+          else
+            echo "Error: Binary not found at $SOURCE"
+            echo "Contents of release directory:"
+            ls -la target/${{ matrix.job.target }}/release/
+            exit 1
+          fi
 
       - name: Release
         uses: softprops/action-gh-release@v1
