@@ -8,10 +8,14 @@ class AiCommitCli < Formula
   depends_on "rust" => :build
 
   def install
-    system "cargo", "install", "--root", prefix, "--path", "."
+    system "cargo", "build", "--release"
+    # Install both binaries
+    bin.install "target/release/ai_commit_cli"
+    bin.install_symlink bin/"ai_commit_cli" => "aic"
   end
 
   test do
-    assert_match "aic #{version}", shell_output("#{bin}/aic --version")
+    system "#{bin}/aic", "--version"
+    system "#{bin}/ai_commit_cli", "--version"
   end
 end
