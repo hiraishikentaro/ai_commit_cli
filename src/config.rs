@@ -4,6 +4,7 @@ use std::fs::{self, File, OpenOptions};
 use std::io::{self, Read, Write};
 use std::path::PathBuf;
 use crate::language::Language;
+use promptuity::{prompts::{Select, SelectOption}, themes::FancyTheme, Promptuity, Term};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]
 pub enum Platform {
@@ -156,25 +157,35 @@ pub fn get_config_path() -> Result<PathBuf> {
 
 // 対話式の選択機能 - プラットフォーム
 pub fn select_platform() -> Result<Platform> {
-    println!("Select AI platform:");
-    println!("1. Claude (Anthropic)");
-    println!("2. GPT-4 (OpenAI)");
-    println!("3. Gemini (Google)");
-    print!("Enter your choice (1-3): ");
-    io::stdout().flush()?;
+    let mut term = Term::default();
+    let mut theme = FancyTheme::default();
+    let mut p = Promptuity::new(&mut term, &mut theme);
 
-    let mut input = String::new();
-    io::stdin().read_line(&mut input)?;
+    let options = vec![
+        (format!("Claude (Anthropic): {}", Platform::Claude.model_name()), Platform::Claude),
+        (format!("GPT-4 (OpenAI): {}", Platform::OpenAI.model_name()), Platform::OpenAI),
+        (format!("Gemini (Google): {}", Platform::Gemini.model_name()), Platform::Gemini),
+    ];
 
-    match input.trim() {
-        "1" => Ok(Platform::Claude),
-        "2" => Ok(Platform::OpenAI),
-        "3" => Ok(Platform::Gemini),
-        _ => {
-            println!("Invalid choice. Using default (Claude).");
-            Ok(Platform::Claude)
-        }
-    }
+    let select_options: Vec<SelectOption<String>> = options
+        .iter()
+        .map(|(label, _)| SelectOption::new(label.to_string(), label.to_string()))
+        .collect();
+
+    let mut select = Select::new("Select AI platform for commit messages", select_options);
+
+    p.begin()?;
+    let selected = p.prompt(&mut select)?;
+    p.finish()?;
+
+    // Find the matching platform based on the selected label
+    let selected_platform = options
+        .iter()
+        .find(|(label, _)| label == &selected)
+        .map(|(_, platform)| *platform)
+        .unwrap_or(Platform::default());
+
+    Ok(selected_platform)
 }
 
 pub fn input_api_key(platform: Platform) -> Result<String> {
