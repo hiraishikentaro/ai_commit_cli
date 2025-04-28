@@ -36,41 +36,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Generate Release Notes
-        if: matrix.job.target == 'x86_64-unknown-linux-gnu'
-        id: release_notes
-        run: |
-          # Get the latest tag
-          LATEST_TAG=$(git describe --tags --abbrev=0)
-
-          # Get the previous tag
-          PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^)
-
-          # Generate changelog
-          echo "CHANGELOG" > RELEASE_NOTES.md
-          echo "==========" >> RELEASE_NOTES.md
-          echo "" >> RELEASE_NOTES.md
-
-          if [ "$PREVIOUS_TAG" != "" ]; then
-            # If there is a previous tag, list changes since then
-            echo "Changes since $PREVIOUS_TAG:" >> RELEASE_NOTES.md
-            git log --pretty=format:"* %s" $PREVIOUS_TAG..$LATEST_TAG >> RELEASE_NOTES.md
-          else
-            # If this is the first tag, list all changes
-            echo "Initial release changes:" >> RELEASE_NOTES.md
-            git log --pretty=format:"* %s" $LATEST_TAG >> RELEASE_NOTES.md
-          fi
-
-          echo "" >> RELEASE_NOTES.md
-          echo "" >> RELEASE_NOTES.md
-          echo "## Installation" >> RELEASE_NOTES.md
-          echo "" >> RELEASE_NOTES.md
-          echo "You can install via Homebrew:" >> RELEASE_NOTES.md
-          echo '```bash' >> RELEASE_NOTES.md
-          echo "brew tap hiraishikentaro/ai_commit_cli" >> RELEASE_NOTES.md
-          echo "brew install ai_commit_cli" >> RELEASE_NOTES.md
-          echo '```' >> RELEASE_NOTES.md
-
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
