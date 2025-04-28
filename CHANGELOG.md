@@ -2,7 +2,16 @@
 
 All notable changes to the AI Commit CLI will be documented in this file.
 
-## [0.0.1] - 2024-06-17
+## [0.0.2] - 2025-04-28
+
+### Added
+
+- Interactive configuration selection using promptuity
+- Homebrew installation support
+  - Added Homebrew formula
+  - Implemented GitHub Actions workflow for testing
+
+## [0.0.1] - 2025-04-28
 
 ### Features
 
