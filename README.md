@@ -18,6 +18,13 @@ A [Rust](https://www.rust-lang.org/) CLI tool that analyzes staged Git changes a
 
 ## Installation
 
+### From Homebrew
+
+```
+brew tap hiraishikentaro/ai_commit_cli
+brew install aic
+```
+
 ### From Source
 
 1. Clone the repository:
