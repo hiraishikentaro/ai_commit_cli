@@ -69,5 +69,3 @@ jobs:
         with:
           files: |
             target/${{ matrix.job.target }}/release/ai_commit_cli-${{ github.ref_name }}-${{ matrix.job.target }}${{ matrix.job.extension }}
-          body_path: RELEASE_NOTES.md
-          generate_release_notes: true
