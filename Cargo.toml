@@ -12,3 +12,6 @@ dotenv = "0.15" # .envファイルから環境変数を読み込む
 anyhow = "1.0" # エラーハンドリングを簡単にする
 clap = { version = "4.5", features = ["derive"] } # コマンドライン引数のパース
 dirs = "5.0" # ホームディレクトリなどの特殊なディレクトリを取得する
+
+[dev-dependencies]
+mockito = "1.2.0" # HTTP APIのモック

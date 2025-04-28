@@ -1,5 +1,7 @@
 # AI Commit CLI
 
+[![Rust](https://github.com/yourusername/ai_commit_cli/actions/workflows/rust.yml/badge.svg)](https://github.com/yourusername/ai_commit_cli/actions/workflows/rust.yml)
+
 A Rust CLI tool that analyzes staged Git changes and automatically generates optimal commit messages using AI.
 
 ## Supported AI Platforms

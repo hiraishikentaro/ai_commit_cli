@@ -8,6 +8,9 @@ mod api;
 mod config;
 use config::Config;
 
+#[cfg(test)]
+mod tests;
+
 #[derive(Parser, Debug)]
 #[command(author, version, about = "Generate commit messages using AI")]
 struct Args {
