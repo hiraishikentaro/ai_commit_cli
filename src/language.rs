@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::io::Write;
+use promptuity::{prompts::{Select, SelectOption}, themes::FancyTheme, Promptuity, Term};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
 pub enum Language {
@@ -62,25 +62,34 @@ impl Default for Language {
     }
 }
 
-// 対話式の選択機能 - 言語
 pub fn select_language() -> anyhow::Result<Language> {
-    println!("Select language for commit messages:");
-    println!("JA. Japanese (日本語)");
-    println!("EN. English");
-    println!("CN. Chinese");
-    print!("Enter your choice (JA/EN/CN): ");
-    std::io::stdout().flush()?;
+    let mut term = Term::default();
+    let mut theme = FancyTheme::default();
+    let mut p = Promptuity::new(&mut term, &mut theme);
 
-    let mut input = String::new();
-    std::io::stdin().read_line(&mut input)?;
+    let options = vec![
+        ("Japanese (日本語)", Language::Japanese),
+        ("English", Language::English),
+        ("Chinese (中文)", Language::Chinese),
+    ];
 
-    match input.trim() {
-        "JA" => Ok(Language::Japanese),
-        "EN" => Ok(Language::English),
-        "CN" => Ok(Language::Chinese),
-        _ => {
-            println!("Invalid choice. Using default (Japanese).");
-            Ok(Language::Japanese)
-        }
-    }
+    let select_options: Vec<SelectOption<String>> = options
+        .iter()
+        .map(|(label, _)| SelectOption::new(label.to_string(), label.to_string()))
+        .collect();
+
+    let mut select = Select::new("Select language for commit messages", select_options);
+
+    p.begin()?;
+    let selected = p.prompt(&mut select)?;
+    p.finish()?;
+
+    // Find the matching language based on the selected label
+    let selected_language = options
+        .iter()
+        .find(|(label, _)| label == &selected)
+        .map(|(_, lang)| *lang)
+        .unwrap_or(Language::default());
+
+    Ok(selected_language)
 }
