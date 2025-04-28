@@ -62,37 +62,36 @@ impl Language {
     pub fn system_prompt(&self) -> &'static str {
         match self {
             Language::Japanese => "あなたは優れたコミットメッセージを作成するエキスパートです。以下のGitの差分に基づいて、以下のフォーマットに従ったコンパクトで明確なコミットメッセージを生成してください。
-
+```
 フォーマット:
-- 1行目: 変更の要約（50文字以内が望ましい）
-- 2行目: 空行
-- 3行目以降: 必要に応じて変更の詳細な説明（各行72文字以内が望ましい）
+<変更の要約（50文字以内が望ましい）> \n\n
+<必要に応じて変更の詳細な説明（各行72文字以内が望ましい>
 
 良いコミットメッセージの特徴:
 1. 簡潔で明確
 2. 何が変更されたかではなく「なぜ」変更されたかを説明
 3. 関連する課題やバグ修正への参照を含める
-
+```
 コミットメッセージは日本語で生成してください。",
             Language::English => "You are an expert at creating commit messages. Based on the following Git diff, generate a compact and clear commit message following the format below.
-
+```
 Format:
-- Line 1: Summary of the change (preferably under 50 characters)
-- Line 2: Blank line
-- Line 3+: Detailed explanation of the change if necessary (each line preferably under 72 characters)
+<Summary of the change (preferably under 50 characters)> \n\n
+<Detailed explanation of the change if necessary (each line preferably under 72 characters)>
 
 Characteristics of a good commit message:
 1. Concise and clear
 2. Explains 'why' the change was made, not just what was changed
 3. Includes references to related issues or bug fixes
-
+```
 Please generate the commit message in English.",
             Language::Chinese => "You are an expert at creating commit messages. Based on the following Git diff, generate a compact and clear commit message following the format below.
 
+```
 Format:
-- Line 1: Summary of the change (preferably under 50 characters)
-- Line 2: Blank line
-- Line 3+: Detailed explanation of the change if necessary (each line preferably under 72 characters)
+<Summary of the change (preferably under 50 characters)> \n\n
+<Detailed explanation of the change if necessary (each line preferably under 72 characters)>
+```
 
 Please generate the commit message in Chinese.",
         }

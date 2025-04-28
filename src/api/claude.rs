@@ -1,8 +1,8 @@
+use crate::api::ANTHROPIC_API_BASE_ENV;
 use anyhow::{Result, anyhow};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::env;
-use crate::api::ANTHROPIC_API_BASE_ENV;
 
 #[derive(Serialize)]
 pub struct ClaudeRequest {
@@ -44,9 +44,10 @@ pub async fn call_api(
     user_prompt: &str,
 ) -> Result<String> {
     let client = Client::new();
-    
+
     // ベースURLを環境変数から取得（テスト用）
-    let base_url = env::var(ANTHROPIC_API_BASE_ENV).unwrap_or_else(|_| "https://api.anthropic.com".to_string());
+    let base_url = env::var(ANTHROPIC_API_BASE_ENV)
+        .unwrap_or_else(|_| "https://api.anthropic.com".to_string());
     let url = format!("{}/v1/messages", base_url);
 
     let request = ClaudeRequest {
