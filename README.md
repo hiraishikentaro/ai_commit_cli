@@ -12,24 +12,34 @@ A [Rust](https://www.rust-lang.org/) CLI tool that analyzes staged Git changes a
 
 ## Prerequisites
 
-- Rust and Cargo installed
 - Git installed
 - API key for any of the supported AI platforms
 
 ## Installation
 
+### Using Homebrew (macOS)
+
+1. Add the tap and install:
+
+   ```bash
+   brew tap hiraishikentaro/ai_commit_cli
+   brew install ai_commit_cli
+   ```
+
 ### From Source
+
+Requires Rust and Cargo installed.
 
 1. Clone the repository:
 
-   ```
+   ```bash
    git clone https://github.com/yourusername/ai_commit_cli.git
    cd ai_commit_cli
    ```
 
 2. Install using Cargo:
 
-   ```
+   ```bash
    cargo install --path .
    ```
 
@@ -39,13 +49,13 @@ A [Rust](https://www.rust-lang.org/) CLI tool that analyzes staged Git changes a
 
    - Using the interactive command:
 
-     ```
+     ```bash
      aic config --api
      ```
 
    - Or using environment variables:
 
-     ```
+     ```bash
      # For Claude
      export CLAUDE_API_KEY=your_anthropic_api_key_here
 
