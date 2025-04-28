@@ -1,0 +1,52 @@
+name: Homebrew Formula Test
+
+on:
+  push:
+    paths:
+      - "Formula/**"
+  pull_request:
+    paths:
+      - "Formula/**"
+  workflow_dispatch:
+
+jobs:
+  test-formula:
+    name: Test on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Set up Homebrew
+        id: set-up-homebrew
+        uses: Homebrew/actions/setup-homebrew@master
+
+      - name: Cache Homebrew Bundler RubyGems
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.set-up-homebrew.outputs.gems-path }}
+          key: ${{ runner.os }}-rubygems-${{ steps.set-up-homebrew.outputs.gems-hash }}
+          restore-keys: ${{ runner.os }}-rubygems-
+
+      - name: Install Homebrew Bundler RubyGems
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: brew install-bundler-gems
+
+      - name: Test formula syntax
+        run: brew style Formula/ai_commit_cli.rb
+
+      - name: Set up tap
+        run: |
+          mkdir -p "$(brew --repository)/Library/Taps/hiraishikentaro"
+          ln -s "$PWD" "$(brew --repository)/Library/Taps/hiraishikentaro/homebrew-ai_commit_cli"
+
+      - name: Test formula installation
+        run: brew test-bot --only-formulae Formula/ai_commit_cli.rb
