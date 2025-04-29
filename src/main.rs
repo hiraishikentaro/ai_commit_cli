@@ -6,6 +6,7 @@ use tokio;
 
 mod api;
 mod config;
+mod editor;
 mod language;
 use config::Config;
 
@@ -13,7 +14,12 @@ use config::Config;
 mod tests;
 
 #[derive(Parser, Debug)]
-#[command(author, version, about = "Generate commit messages using AI", bin_name = "aic")]
+#[command(
+    author,
+    version,
+    about = "Generate commit messages using AI",
+    bin_name = "aic"
+)]
 struct Args {
     #[command(subcommand)]
     command: Option<Commands>,
@@ -41,6 +47,10 @@ enum Commands {
         /// Set language for commit messages
         #[arg(long, help = "Set language for commit messages (interactive)")]
         language: bool,
+
+        /// Set custom prompt for commit messages
+        #[arg(long, help = "Set custom prompt for commit messages (interactive)")]
+        prompt: bool,
     },
 }
 
@@ -65,7 +75,10 @@ async fn generate_commit_message(diff: &str) -> Result<String> {
     let platform = config.platform;
 
     // システムプロンプトと言語に応じたユーザープロンプトを取得
-    let system_prompt = language.system_prompt();
+    let system_prompt = match &config.custom_prompt {
+        Some(custom_prompt) => custom_prompt.as_str(),
+        None => language.system_prompt(),
+    };
     let user_prompt = match language {
         language::Language::Japanese => format!(
             "以下のGit差分に基づいてコミットメッセージを生成してください：\n\n```\n{}\n```",
@@ -75,7 +88,9 @@ async fn generate_commit_message(diff: &str) -> Result<String> {
             "Generate a commit message based on the following Git diff:\n\n```\n{}\n```",
             diff
         ),
-        language::Language::Chinese => format!("根据以下Git差异生成提交消息：\n\n```\n{}\n```", diff),
+        language::Language::Chinese => {
+            format!("根据以下Git差异生成提交消息：\n\n```\n{}\n```", diff)
+        }
     };
 
     // APIモジュールを使用してコミットメッセージを生成
@@ -120,8 +135,9 @@ async fn main() -> Result<()> {
                 api,
                 show,
                 language,
+                prompt,
             } => {
-                return config::handle_config_command(api, show, language).await;
+                return config::handle_config_command(api, show, language, prompt).await;
             }
         }
     }

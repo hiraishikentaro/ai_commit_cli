@@ -77,6 +77,9 @@ aic config --api
 # Set language for commit messages (interactive)
 aic config --language
 
+# Set custom prompt for commit messages (interactive)
+aic config --prompt
+
 # Show current configuration
 aic config --show
 ```
@@ -102,6 +105,29 @@ Available language options:
 - JA: Japanese (default)
 - EN: English
 - CN: Chinese
+
+### Custom Prompts
+
+You can set your own custom system prompt to control how AI generates commit messages:
+
+```
+aic config --prompt
+```
+
+This will open a simple vim-like editor where you can write and edit your custom prompt with multi-line support. Key controls:
+
+- Use arrow keys to navigate
+- Type to insert text
+- Press `Ctrl+S` to save changes
+- Press `Esc` to exit without saving
+
+This allows you to specify custom instructions for the AI model. For example:
+
+- Enforce specific commit message conventions
+- Adjust the style or format of commit messages
+- Add project-specific context or requirements
+
+When a custom prompt is set, it will be used instead of the default system prompt for the selected language. To return to using the default prompt, set an empty custom prompt.
 
 ### Generating Commit Messages
 
