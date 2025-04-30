@@ -2,7 +2,7 @@
 
 A [Rust](https://www.rust-lang.org/) CLI tool that analyzes staged Git changes and automatically generates optimal commit messages using AI.
 
-[![Changelog](https://img.shields.io/badge/changelog-v0.0.3-green.svg)](https://github.com/hiraishikentaro/ai_commit_cli/blob/master/CHANGELOG.md)
+[![Changelog](https://img.shields.io/badge/changelog-v0.0.2-green.svg)](https://github.com/hiraishikentaro/ai_commit_cli/blob/master/CHANGELOG.md)
 
 ## Supported AI Platforms
 
