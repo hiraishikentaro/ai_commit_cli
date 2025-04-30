@@ -1,10 +1,14 @@
+use crate::language::Language;
 use anyhow::{Result, anyhow};
+use promptuity::{
+    Promptuity, Term,
+    prompts::{Select, SelectOption},
+    themes::FancyTheme,
+};
 use serde::{Deserialize, Serialize};
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, Read, Write};
 use std::path::PathBuf;
-use crate::language::Language;
-use promptuity::{prompts::{Select, SelectOption}, themes::FancyTheme, Promptuity, Term};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]
 pub enum Platform {
@@ -83,6 +87,7 @@ pub struct Config {
     pub api_keys: ApiKeys,
     pub language: Language,
     pub platform: Platform,
+    pub custom_prompt: Option<String>,
 }
 
 impl Config {
@@ -91,6 +96,7 @@ impl Config {
             api_keys: ApiKeys::new(),
             language: Language::default(),
             platform: Platform::default(),
+            custom_prompt: None,
         }
     }
 
@@ -162,9 +168,18 @@ pub fn select_platform() -> Result<Platform> {
     let mut p = Promptuity::new(&mut term, &mut theme);
 
     let options = vec![
-        (format!("Claude (Anthropic): {}", Platform::Claude.model_name()), Platform::Claude),
-        (format!("GPT-4 (OpenAI): {}", Platform::OpenAI.model_name()), Platform::OpenAI),
-        (format!("Gemini (Google): {}", Platform::Gemini.model_name()), Platform::Gemini),
+        (
+            format!("Claude (Anthropic): {}", Platform::Claude.model_name()),
+            Platform::Claude,
+        ),
+        (
+            format!("GPT-4 (OpenAI): {}", Platform::OpenAI.model_name()),
+            Platform::OpenAI,
+        ),
+        (
+            format!("Gemini (Google): {}", Platform::Gemini.model_name()),
+            Platform::Gemini,
+        ),
     ];
 
     let select_options: Vec<SelectOption<String>> = options
@@ -197,7 +212,12 @@ pub fn input_api_key(platform: Platform) -> Result<String> {
     Ok(api_key.trim().to_string())
 }
 
-pub async fn handle_config_command(api: &bool, show: &bool, language: &bool) -> Result<()> {
+pub async fn handle_config_command(
+    api: &bool,
+    show: &bool,
+    language: &bool,
+    prompt: &bool,
+) -> Result<()> {
     let mut config = Config::load()?;
 
     if *show {
@@ -228,6 +248,14 @@ pub async fn handle_config_command(api: &bool, show: &bool, language: &bool) -> 
                 "Not set"
             }
         );
+        println!(
+            "Custom prompt: {}",
+            if let Some(_prompt) = &config.custom_prompt {
+                "Set"
+            } else {
+                "Not set (using default)"
+            }
+        );
         return Ok(());
     }
 
@@ -250,5 +278,44 @@ pub async fn handle_config_command(api: &bool, show: &bool, language: &bool) -> 
         config.save()?;
     }
 
+    if *prompt {
+        // カスタムプロンプト入力
+        let custom_prompt = input_custom_prompt()?;
+        if custom_prompt.trim().is_empty() {
+            config.custom_prompt = None;
+            println!("Custom prompt cleared. Using default prompt for the selected language.");
+        } else {
+            config.custom_prompt = Some(custom_prompt);
+            println!("Custom prompt set successfully");
+        }
+        config.save()?;
+    }
+
     Ok(())
+}
+
+pub fn input_custom_prompt() -> Result<String> {
+    println!("Custom prompt editor will open. Press Ctrl+S to save and Esc to exit.");
+    println!("Write specific instructions for generating commit messages.");
+    println!(
+        "For example: \"You are an expert at creating concise and informative commit messages.\""
+    );
+    println!("\nPress Enter to continue...");
+
+    // Enterキー入力待ち
+    let mut input = String::new();
+    io::stdin().read_line(&mut input)?;
+
+    // 現在のカスタムプロンプトを取得（存在する場合）
+    let config = Config::load()?;
+    let initial_content = config.custom_prompt.unwrap_or_default();
+
+    // エディタを起動
+    let mut editor = crate::editor::Editor::with_content(&initial_content);
+    let result = editor.run()?;
+
+    // 末尾の改行を削除
+    let result = result.trim_end().to_string();
+
+    Ok(result)
 }
