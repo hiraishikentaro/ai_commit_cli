@@ -2,6 +2,23 @@
 
 All notable changes to the AI Commit CLI will be documented in this file.
 
+## [0.0.3] - 2025-04-30
+
+### Added
+
+- AI model selection feature for each platform
+- Custom prompt support with vim-like editor
+  - New `--prompt` flag in the `config` subcommand
+  - Multi-line prompt editing capability
+
+### Changed
+
+- Updated AI model names and IDs to reflect latest offerings
+  - Added support for Gemini 1.5 Pro
+  - Added support for GPT-4o-mini
+  - Fixed model ID inconsistencies
+- Improved test coverage for platform-model mapping
+
 ## [0.0.2] - 2025-04-28
 
 ### Added
