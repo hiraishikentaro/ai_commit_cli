@@ -1,8 +1,8 @@
 class AiCommitCli < Formula
   desc "AI-powered Git commit message generator"
   homepage "https://github.com/hiraishikentaro/ai_commit_cli"
-  url "https://github.com/hiraishikentaro/ai_commit_cli/archive/refs/tags/v0.0.2.tar.gz"
-  sha256 "584da915b942e454ba9d860589087dc28d31ff1157c0c72e8ccd36dbe2c4c807"
+  url "https://github.com/hiraishikentaro/ai_commit_cli/archive/refs/tags/v0.0.3.tar.gz"
+  sha256 "025b8c77debd8cf86e4a10da14d6263f54231882e23423e3db6d22ac03f33282"
   license "MIT"
 
   depends_on "rust" => :build
