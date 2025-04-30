@@ -50,15 +50,15 @@ impl Platform {
                 ("Claude 3.5 Haiku", "claude-3-5-haiku-20241022"),
             ],
             Platform::OpenAI => vec![
-                ("o4-mini", "o4-mini-2025-04-16"),
-                ("GPT-4.1", "gpt-4.1-2025-04-14"),
-                ("o3-mini", "o3-mini-2025-01-31"),
-                ("o3", "o3-2025-04-16"),
+                ("o4-mini", "o4-mini"),
+                ("GPT-4.1-mini", "gpt-4.1-mini"),
+                ("o3-mini", "o3-mini"),
+                ("GPT-4o-mini", "gpt-4o-mini"),
             ],
             Platform::Gemini => vec![
-                ("Gemini 2.5 Flash", "gemini-2.5-flash-preview-04-17"),
-                ("Gemini 2.5 Pro", "gemini-2.5-pro-preview-03-25"),
-                ("Gemini 2.0 Flash", "models/gemini-2.0-flash"),
+                ("Gemini 2.0 Flash Lite", "gemini-2.0-flash-lite"),
+                ("Gemini 2.0 Flash", "gemini-2.0-flash"),
+                ("Gemini 1.5 Pro", "gemini-1.5-pro"),
             ],
         }
     }

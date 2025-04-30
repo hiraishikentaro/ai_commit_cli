@@ -210,16 +210,29 @@ mod api_tests {
 
     #[test]
     fn test_platform_mapping() {
-        // Verify that each platform is correctly mapped
+        // Verify that each platform is correctly mapped to default model
         let platforms = [Platform::Claude, Platform::OpenAI, Platform::Gemini];
-        let models = platforms
+        let default_models = platforms
             .iter()
             .map(|p| p.default_model_name())
             .collect::<Vec<_>>();
 
-        assert!(models.contains(&"claude-3-opus-20240229"));
-        assert!(models.contains(&"gpt-4"));
-        assert!(models.contains(&"gemini-1.0-pro"));
+        // Check default models match expected values
+        assert!(default_models.contains(&"claude-3-opus-20240229"));
+        assert!(default_models.contains(&"gpt-4"));
+        assert!(default_models.contains(&"gemini-1.0-pro"));
+
+        // Check that all platforms have models available
+        for platform in &platforms {
+            let models = platform.get_models();
+            assert!(!models.is_empty(), "Platform should have models available");
+
+            // Each model should have proper ID format
+            for (_, id) in models {
+                assert!(!id.is_empty());
+                assert!(!id.contains(" "), "Model ID should not contain spaces");
+            }
+        }
     }
 }
 

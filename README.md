@@ -23,15 +23,15 @@ Each AI platform offers multiple models with different capabilities and costs:
 ### OpenAI
 
 - o4-mini
-- GPT-4.1
+- GPT-4.1-mini
 - o3-mini
-- o3
+- GPT-4o-mini
 
 ### Gemini
 
-- Gemini 2.5 Flash
-- Gemini 2.5 Pro
+- Gemini 2.0 Flash Lite
 - Gemini 2.0 Flash
+- Gemini 1.5 Pro
 
 ## Prerequisites
 
