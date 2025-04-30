@@ -34,11 +34,32 @@ impl Platform {
         }
     }
 
-    pub fn model_name(&self) -> &'static str {
+    pub fn default_model_name(&self) -> &'static str {
         match self {
             Platform::Claude => "claude-3-opus-20240229",
             Platform::OpenAI => "gpt-4",
             Platform::Gemini => "gemini-1.0-pro",
+        }
+    }
+
+    pub fn get_models(&self) -> Vec<(&'static str, &'static str)> {
+        match self {
+            Platform::Claude => vec![
+                ("Claude 3.7 Sonnet", "claude-3-7-sonnet-20250219"),
+                ("Claude 3.5 Sonnet	", "claude-3-5-sonnet-20240620"),
+                ("Claude 3.5 Haiku", "claude-3-5-haiku-20241022"),
+            ],
+            Platform::OpenAI => vec![
+                ("o4-mini", "o4-mini"),
+                ("GPT-4.1-mini", "gpt-4.1-mini"),
+                ("o3-mini", "o3-mini"),
+                ("GPT-4o-mini", "gpt-4o-mini"),
+            ],
+            Platform::Gemini => vec![
+                ("Gemini 2.0 Flash Lite", "gemini-2.0-flash-lite"),
+                ("Gemini 2.0 Flash", "gemini-2.0-flash"),
+                ("Gemini 1.5 Pro", "gemini-1.5-pro"),
+            ],
         }
     }
 }
@@ -87,6 +108,7 @@ pub struct Config {
     pub api_keys: ApiKeys,
     pub language: Language,
     pub platform: Platform,
+    pub selected_model: Option<String>,
     pub custom_prompt: Option<String>,
 }
 
@@ -96,6 +118,7 @@ impl Config {
             api_keys: ApiKeys::new(),
             language: Language::default(),
             platform: Platform::default(),
+            selected_model: None,
             custom_prompt: None,
         }
     }
@@ -151,6 +174,12 @@ impl Config {
             self.platform.env_var_name()
         ))
     }
+
+    pub fn get_model_name(&self) -> String {
+        self.selected_model
+            .clone()
+            .unwrap_or_else(|| self.platform.default_model_name().to_string())
+    }
 }
 
 pub fn get_config_path() -> Result<PathBuf> {
@@ -161,25 +190,27 @@ pub fn get_config_path() -> Result<PathBuf> {
         .join("config.json"))
 }
 
-// 対話式の選択機能 - プラットフォーム
-pub fn select_platform() -> Result<Platform> {
+// 対話式の選択機能 - プラットフォームとモデル
+pub fn select_platform_and_model() -> Result<(Platform, String)> {
+    // まずプラットフォームを選択
+    let platform = select_platform_only()?;
+
+    // 次にモデルを選択
+    let model = select_model(platform)?;
+
+    Ok((platform, model))
+}
+
+// プラットフォームのみ選択する関数（内部用）
+fn select_platform_only() -> Result<Platform> {
     let mut term = Term::default();
     let mut theme = FancyTheme::default();
     let mut p = Promptuity::new(&mut term, &mut theme);
 
     let options = vec![
-        (
-            format!("Claude (Anthropic): {}", Platform::Claude.model_name()),
-            Platform::Claude,
-        ),
-        (
-            format!("GPT-4 (OpenAI): {}", Platform::OpenAI.model_name()),
-            Platform::OpenAI,
-        ),
-        (
-            format!("Gemini (Google): {}", Platform::Gemini.model_name()),
-            Platform::Gemini,
-        ),
+        ("Claude (Anthropic)", Platform::Claude),
+        ("OpenAI (GPT)", Platform::OpenAI),
+        ("Gemini (Google)", Platform::Gemini),
     ];
 
     let select_options: Vec<SelectOption<String>> = options
@@ -203,6 +234,30 @@ pub fn select_platform() -> Result<Platform> {
     Ok(selected_platform)
 }
 
+// プラットフォームに対応するモデルを選択する関数
+pub fn select_model(platform: Platform) -> Result<String> {
+    let mut term = Term::default();
+    let mut theme = FancyTheme::default();
+    let mut p = Promptuity::new(&mut term, &mut theme);
+
+    let models = platform.get_models();
+    let select_options: Vec<SelectOption<String>> = models
+        .iter()
+        .map(|(label, id)| SelectOption::new(label.to_string(), id.to_string()))
+        .collect();
+
+    let mut select = Select::new(
+        format!("Select {} model", platform.as_str()),
+        select_options,
+    );
+
+    p.begin()?;
+    let selected_model_id = p.prompt(&mut select)?;
+    p.finish()?;
+
+    Ok(selected_model_id)
+}
+
 pub fn input_api_key(platform: Platform) -> Result<String> {
     print!("Enter {} API key: ", platform.as_str());
     io::stdout().flush()?;
@@ -212,18 +267,15 @@ pub fn input_api_key(platform: Platform) -> Result<String> {
     Ok(api_key.trim().to_string())
 }
 
-pub async fn handle_config_command(
-    api: &bool,
-    show: &bool,
-    language: &bool,
-    prompt: &bool,
-) -> Result<()> {
+// 再帰を避けるために、引数からコピーして新しい関数として実装
+async fn do_config(api: bool, show: bool, language: bool, prompt: bool) -> Result<()> {
     let mut config = Config::load()?;
 
-    if *show {
+    if show {
         println!("Current configuration:");
         println!("Language: {}", config.language.as_str());
         println!("Platform: {}", config.platform.as_str());
+        println!("Model: {}", config.get_model_name());
         println!(
             "Claude API key: {}",
             if config.api_keys.claude.is_some() {
@@ -250,48 +302,62 @@ pub async fn handle_config_command(
         );
         println!(
             "Custom prompt: {}",
-            if let Some(_prompt) = &config.custom_prompt {
+            if config.custom_prompt.is_some() {
                 "Set"
             } else {
-                "Not set (using default)"
+                "Not set"
             }
         );
+
         return Ok(());
     }
 
-    if *language {
-        // 言語選択
+    if api {
+        // プラットフォームとモデルを選択
+        let (platform, model) = select_platform_and_model()?;
+
+        // プラットフォームとモデルを設定に保存
+        config.platform = platform;
+        config.selected_model = Some(model);
+
+        // APIキーを入力
+        let api_key = input_api_key(platform)?;
+        config.api_keys.set_key(platform, api_key);
+
+        // 設定を保存
+        config.save()?;
+        println!("API configuration and model saved successfully.");
+        return Ok(());
+    }
+
+    if language {
         config.language = crate::language::select_language()?;
+        config.save()?;
         println!("Language set to: {}", config.language.as_str());
-        config.save()?;
     }
 
-    if *api {
-        // プラットフォーム選択
-        config.platform = select_platform()?;
-        println!("Platform set to: {}", config.platform.as_str());
-
-        // APIキー入力
-        let api_key = input_api_key(config.platform)?;
-        config.api_keys.set_key(config.platform, api_key);
-        println!("{} API key set successfully", config.platform.as_str());
+    if prompt {
+        config.custom_prompt = Some(input_custom_prompt()?);
         config.save()?;
+        println!("Custom prompt saved successfully.");
     }
 
-    if *prompt {
-        // カスタムプロンプト入力
-        let custom_prompt = input_custom_prompt()?;
-        if custom_prompt.trim().is_empty() {
-            config.custom_prompt = None;
-            println!("Custom prompt cleared. Using default prompt for the selected language.");
-        } else {
-            config.custom_prompt = Some(custom_prompt);
-            println!("Custom prompt set successfully");
-        }
-        config.save()?;
+    // 何も指定されていない場合は設定メニューを表示
+    if !(api || show || language || prompt) {
+        // 非同期再帰呼び出しをBoxでラップ
+        return Box::pin(do_config(true, false, false, false)).await;
     }
 
     Ok(())
+}
+
+pub async fn handle_config_command(
+    api: &bool,
+    show: &bool,
+    language: &bool,
+    prompt: &bool,
+) -> Result<()> {
+    do_config(*api, *show, *language, *prompt).await
 }
 
 pub fn input_custom_prompt() -> Result<String> {

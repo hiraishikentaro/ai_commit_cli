@@ -1,3 +1,6 @@
 {
-  "cSpell.words": ["dotenv", "Geminigeneration"]
+  "cSpell.words": ["dotenv", "Geminigeneration"],
+  "[rust]": {
+    "editor.defaultFormatter": "rust-lang.rust-analyzer"
+  }
 }
