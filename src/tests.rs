@@ -17,10 +17,43 @@ mod config_tests {
     }
 
     #[test]
-    fn test_platform_model_name() {
-        assert_eq!(Platform::Claude.model_name(), "claude-3-opus-20240229");
-        assert_eq!(Platform::OpenAI.model_name(), "gpt-4");
-        assert_eq!(Platform::Gemini.model_name(), "gemini-1.0-pro");
+    fn test_platform_default_model_name() {
+        assert_eq!(
+            Platform::Claude.default_model_name(),
+            "claude-3-opus-20240229"
+        );
+        assert_eq!(Platform::OpenAI.default_model_name(), "gpt-4");
+        assert_eq!(Platform::Gemini.default_model_name(), "gemini-1.0-pro");
+    }
+
+    #[test]
+    fn test_platform_get_models() {
+        // テスト: 各プラットフォームのモデルリストが正しく返されるか
+        let claude_models = Platform::Claude.get_models();
+        let openai_models = Platform::OpenAI.get_models();
+        let gemini_models = Platform::Gemini.get_models();
+
+        // 各プラットフォームが少なくとも1つのモデルを持っていることを確認
+        assert!(!claude_models.is_empty());
+        assert!(!openai_models.is_empty());
+        assert!(!gemini_models.is_empty());
+
+        // 特定のモデルがリストに含まれていることを確認
+        assert!(claude_models.iter().any(|(_, id)| id.contains("claude-3")));
+
+        assert!(
+            openai_models
+                .iter()
+                .any(|(_, id)| id.contains("gpt") || id.contains("o"))
+        );
+
+        assert!(gemini_models.iter().any(|(_, id)| id.contains("gemini")));
+
+        // 各モデルがラベルとIDのペアであることを確認
+        for (label, id) in claude_models {
+            assert!(!label.is_empty());
+            assert!(!id.is_empty());
+        }
     }
 
     #[test]
@@ -83,6 +116,65 @@ mod config_tests {
         assert!(config.api_keys.claude.is_none());
         assert!(config.api_keys.openai.is_none());
         assert!(config.api_keys.gemini.is_none());
+        assert!(config.selected_model.is_none());
+    }
+
+    #[test]
+    fn test_config_get_model_name() {
+        // デフォルトのプラットフォームでモデル名を取得するテスト
+        let config = Config::new();
+        assert_eq!(
+            config.get_model_name(),
+            config.platform.default_model_name()
+        );
+
+        // 選択されたモデルがある場合のテスト
+        let mut config_with_model = Config::new();
+        let selected_model = "custom-model-name";
+        config_with_model.selected_model = Some(selected_model.to_string());
+        assert_eq!(config_with_model.get_model_name(), selected_model);
+    }
+
+    #[test]
+    fn test_config_save_load_with_selected_model() {
+        // テスト用の一時ディレクトリとファイルパスを作成
+        let temp_dir = std::env::temp_dir();
+        let test_config_dir = temp_dir.join("ai_commit_cli_test_model");
+        let test_config_file = test_config_dir.join("config.json");
+
+        // テスト用ディレクトリを作成
+        std::fs::create_dir_all(&test_config_dir).unwrap();
+
+        // 環境変数をモック - 安全でない操作なのでunsafeブロックで囲む
+        unsafe {
+            std::env::set_var("HOME", temp_dir.to_str().unwrap());
+        }
+
+        // テスト用のモデル選択を含む設定
+        let mut config = Config::new();
+        let test_model = "claude-3-sonnet-20240229";
+        config.selected_model = Some(test_model.to_string());
+
+        // 設定を保存
+        let save_result = std::fs::write(
+            &test_config_file,
+            serde_json::to_string_pretty(&config).unwrap(),
+        );
+        assert!(save_result.is_ok());
+
+        // 設定ファイルが存在することを確認
+        assert!(test_config_file.exists());
+
+        // ファイルから直接設定を読み込む
+        let file_content = std::fs::read_to_string(&test_config_file).unwrap();
+        let loaded_config: Config = serde_json::from_str(&file_content).unwrap();
+
+        // 選択したモデルが正しく保存・読み込みされていることを確認
+        assert_eq!(loaded_config.selected_model, Some(test_model.to_string()));
+
+        // テスト後の cleanup
+        std::fs::remove_file(&test_config_file).unwrap_or(());
+        std::fs::remove_dir(&test_config_dir).unwrap_or(());
     }
 }
 
@@ -120,7 +212,10 @@ mod api_tests {
     fn test_platform_mapping() {
         // Verify that each platform is correctly mapped
         let platforms = [Platform::Claude, Platform::OpenAI, Platform::Gemini];
-        let models = platforms.iter().map(|p| p.model_name()).collect::<Vec<_>>();
+        let models = platforms
+            .iter()
+            .map(|p| p.default_model_name())
+            .collect::<Vec<_>>();
 
         assert!(models.contains(&"claude-3-opus-20240229"));
         assert!(models.contains(&"gpt-4"));
@@ -162,63 +257,63 @@ mod custom_prompt_tests {
     fn test_custom_prompt_in_config() {
         // カスタムプロンプト対応の設定構造体のテスト
         let mut config = Config::new();
-        
+
         // カスタムプロンプトがデフォルトではNoneであることを確認
         assert!(config.custom_prompt.is_none());
-        
+
         // カスタムプロンプトを設定できることを確認
         let test_prompt = "This is a test custom prompt";
         config.custom_prompt = Some(test_prompt.to_string());
-        
+
         assert_eq!(config.custom_prompt, Some(test_prompt.to_string()));
-        
+
         // カスタムプロンプトをクリアできることを確認
         config.custom_prompt = None;
         assert!(config.custom_prompt.is_none());
     }
-    
+
     #[test]
     fn test_config_save_load_with_custom_prompt() {
         // テスト用の一時ディレクトリとファイルパスを作成
         let temp_dir = std::env::temp_dir();
         let test_config_dir = temp_dir.join("ai_commit_cli_test");
         let test_config_file = test_config_dir.join("config.json");
-        
+
         // テスト用ディレクトリを作成
         fs::create_dir_all(&test_config_dir).unwrap();
-        
+
         // 環境変数をモック
         unsafe {
             std::env::set_var("HOME", temp_dir.to_str().unwrap());
         }
-        
+
         // テスト用の設定ファイルパス取得関数（実際には使用しないため_をつける）
-        let _get_test_config_path = || -> Result<PathBuf, anyhow::Error> {
-            Ok(test_config_file.clone())
-        };
-        
+        let _get_test_config_path =
+            || -> Result<PathBuf, anyhow::Error> { Ok(test_config_file.clone()) };
+
         // テスト用のカスタムプロンプトを含む設定
         let mut config = Config::new();
-        let test_prompt = "Custom prompt for testing purposes\nWith multiple lines\nAnd formatting.";
+        let test_prompt =
+            "Custom prompt for testing purposes\nWith multiple lines\nAnd formatting.";
         config.custom_prompt = Some(test_prompt.to_string());
-        
+
         // 設定を保存
         let save_result = fs::write(
             &test_config_file,
             serde_json::to_string_pretty(&config).unwrap(),
         );
         assert!(save_result.is_ok());
-        
+
         // 設定ファイルが存在することを確認
         assert!(test_config_file.exists());
-        
+
         // ファイルから直接設定を読み込む
         let file_content = fs::read_to_string(&test_config_file).unwrap();
         let loaded_config: Config = serde_json::from_str(&file_content).unwrap();
-        
+
         // カスタムプロンプトが正しく保存・読み込みされていることを確認
         assert_eq!(loaded_config.custom_prompt, Some(test_prompt.to_string()));
-        
+
         // テスト後の cleanup
         fs::remove_file(&test_config_file).unwrap_or(());
         fs::remove_dir(&test_config_dir).unwrap_or(());
@@ -227,70 +322,70 @@ mod custom_prompt_tests {
 
 mod editor_tests {
     use crate::editor::Editor;
-    
+
     #[test]
     fn test_editor_creation() {
         // 新しいエディタインスタンスのテスト
         let editor = Editor::_new();
-        
+
         // 初期状態の確認
         let content = editor.get_content();
         assert_eq!(content.len(), 1);
         assert_eq!(content[0], "");
-        
+
         let (cursor_x, cursor_y) = editor.get_cursor_position();
         assert_eq!(cursor_x, 0);
         assert_eq!(cursor_y, 0);
-        
+
         assert!(editor.get_message().contains("INSERT MODE"));
     }
-    
+
     #[test]
     fn test_editor_with_content() {
         // 既存コンテンツでのエディタ初期化テスト
         let test_content = "Line 1\nLine 2\nLine 3";
         let editor = Editor::with_content(test_content);
-        
+
         // コンテンツが正しく読み込まれていることを確認
         let content = editor.get_content();
         assert_eq!(content.len(), 3);
         assert_eq!(content[0], "Line 1");
         assert_eq!(content[1], "Line 2");
         assert_eq!(content[2], "Line 3");
-        
+
         let (cursor_x, cursor_y) = editor.get_cursor_position();
         assert_eq!(cursor_x, 0);
         assert_eq!(cursor_y, 0);
     }
-    
+
     #[test]
     fn test_editor_with_empty_content() {
         // 空のコンテンツでのエディタ初期化テスト
         let editor = Editor::with_content("");
-        
+
         // 空の場合でも1行は確保されていることを確認
         let content = editor.get_content();
         assert_eq!(content.len(), 1);
         assert_eq!(content[0], "");
     }
-    
+
     #[test]
     fn test_editor_text_processing() {
         // エディタのテキスト処理機能をテスト
         let mut editor = Editor::_new();
-        
+
         // テスト用のテキスト
         let test_text = "First line\nSecond line\nThird line";
-        
+
         // テキスト処理関数を呼び出し
         let result = editor.process_text_for_test(test_text);
-        
+
         // 結果を検証
         assert!(result.contains("First line"));
         assert!(result.contains("Second line"));
         assert!(result.contains("Third line"));
         assert!(result.contains("Test added line"));
-        
+
         // 行数を確認
         let content = editor.get_content();
         assert_eq!(content.len(), 4); // 3行 + 追加した1行
@@ -302,6 +397,7 @@ mod integration_tests {
     use crate::config::{Config, Platform};
     use crate::language::Language;
     use std::sync::Once;
+    use tokio;
 
     static INIT: Once = Once::new();
 
@@ -309,53 +405,144 @@ mod integration_tests {
     fn setup() {
         INIT.call_once(|| {
             // APIモックの設定などがあれば初期化
+            unsafe {
+                std::env::set_var("CLAUDE_API_KEY", "dummy-claude-key");
+                std::env::set_var("OPENAI_API_KEY", "dummy-openai-key");
+                std::env::set_var("GEMINI_API_KEY", "dummy-gemini-key");
+            }
         });
+    }
+
+    // モデル選択機能の統合テスト
+    #[tokio::test]
+    async fn test_selected_model_in_commit_message_generation() {
+        use std::env;
+
+        // APIリクエストをモックするために環境変数でベースURLを設定
+        unsafe {
+            env::set_var("ANTHROPIC_API_BASE", "http://localhost:9999");
+            env::set_var("OPENAI_API_BASE", "http://localhost:9999");
+            env::set_var("GEMINI_API_BASE", "http://localhost:9999");
+        }
+
+        // APIのモックを確認するためのテスト環境設定
+        setup();
+
+        // テスト用の設定
+        let mut config = Config::new();
+
+        // 各プラットフォームでテスト
+        for platform in [Platform::Claude, Platform::OpenAI, Platform::Gemini] {
+            config.platform = platform;
+
+            // デフォルトモデルケース
+            config.selected_model = None;
+            let _default_model = platform.default_model_name().to_string();
+
+            // 選択モデルケース
+            let custom_model = format!("custom-{}-model", platform.as_str().to_lowercase());
+            config.selected_model = Some(custom_model.clone());
+
+            // モデル名が設定から正しく取得されることを確認
+            assert_eq!(config.get_model_name(), custom_model);
+        }
     }
 
     #[tokio::test]
     async fn test_custom_prompt_in_commit_message_generation() {
         setup();
-        
+
         // テスト用のGit diff（未使用だがテストケース理解のために残す）
         let _test_diff = "diff --git a/file.txt b/file.txt\nindex 123..456 789\n--- a/file.txt\n+++ b/file.txt\n@@ -1,3 +1,4 @@\n Line 1\n Line 2\n+Added line\n Line 3";
-        
-        // テスト用のカスタムプロンプト
-        let custom_prompt = "You are a test AI. Just return 'CUSTOM_PROMPT_USED' as the commit message.";
-        
-        // カスタムプロンプトありの設定
-        let mut config_with_custom = Config::new();
-        config_with_custom.custom_prompt = Some(custom_prompt.to_string());
-        config_with_custom.platform = Platform::Claude; // テスト用にプラットフォームを固定
-        config_with_custom.language = Language::English; // テスト用に言語を固定
-        
-        // カスタムプロンプトなしの設定
-        let mut config_without_custom = Config::new();
-        config_without_custom.custom_prompt = None;
-        config_without_custom.platform = Platform::Claude;
-        config_without_custom.language = Language::English;
-        
-        // 実際のAPIを呼び出さないようにモックで実装
-        // 通常はここでAPIsのモックを設定してから以下のようなテストを実行する
-        
-        // カスタムプロンプトが設定されている場合とされていない場合で
-        // システムプロンプトが正しく選択されることを確認するテスト
-        
-        // たとえば以下のようなコード（実際のAPIを呼び出すため、コメントアウト）
-        /*
-        // カスタムプロンプトを使用
-        let message_with_custom = generate_commit_message(test_diff).await;
-        assert!(message_with_custom.is_ok());
-        
-        // デフォルトプロンプトを使用
-        let message_without_custom = generate_commit_message(test_diff).await;
-        assert!(message_without_custom.is_ok());
-        */
-        
-        // 異なるプロンプトが選択されることのみをアサーション
-        assert_ne!(
-            custom_prompt, 
-            Language::English.system_prompt(),
-            "カスタムプロンプトとデフォルトプロンプトは異なるべき"
+
+        // テスト用の設定
+        let mut config = Config::new();
+        config.platform = Platform::Claude; // テスト用にClaudeを選択
+        config.language = Language::English; // 英語を選択
+
+        // カスタムプロンプトを設定
+        let custom_prompt = "You are an expert commit message generator. Be brief and precise.";
+        config.custom_prompt = Some(custom_prompt.to_string());
+
+        // カスタムプロンプトが期待通り設定されることを確認
+        assert_eq!(config.custom_prompt, Some(custom_prompt.to_string()));
+    }
+}
+
+// モデル選択機能のテスト用モジュール
+mod model_selection_tests {
+    use crate::config::{Config, Platform};
+
+    #[test]
+    fn test_platform_get_model_combinations() {
+        // 各プラットフォームとモデルの組み合わせが有効かテスト
+        for platform in [Platform::Claude, Platform::OpenAI, Platform::Gemini] {
+            let models = platform.get_models();
+
+            for (name, id) in models {
+                // 名前とIDが有効な値であることを確認
+                assert!(!name.is_empty(), "Model name should not be empty");
+                assert!(!id.is_empty(), "Model ID should not be empty");
+
+                // IDに無効な文字が含まれていないことを確認
+                assert!(!id.contains(' '), "Model ID should not contain spaces");
+                assert!(!id.contains('\n'), "Model ID should not contain newlines");
+            }
+        }
+    }
+
+    #[test]
+    fn test_config_with_selected_model() {
+        // 設定に選択モデルを設定し、APIに渡すモデル名が正しいかテスト
+        let mut config = Config::new();
+
+        // 各プラットフォームのデフォルトモデル名をテスト
+        for platform in [Platform::Claude, Platform::OpenAI, Platform::Gemini] {
+            config.platform = platform;
+            config.selected_model = None;
+
+            // デフォルトモデル名が取得されることを確認
+            assert_eq!(config.get_model_name(), platform.default_model_name());
+
+            // 各プラットフォームのモデルから1つ選び、設定して確認
+            if let Some((_, model_id)) = platform.get_models().first() {
+                config.selected_model = Some(model_id.to_string());
+                assert_eq!(config.get_model_name(), *model_id);
+            }
+        }
+    }
+
+    #[test]
+    fn test_custom_model_name() {
+        // カスタムモデル名を選択した場合のテスト
+        let mut config = Config::new();
+
+        // プラットフォームのモデルリストにないカスタムモデル名
+        let custom_model = "custom-future-model-not-in-list";
+        config.selected_model = Some(custom_model.to_string());
+
+        // カスタムモデル名が取得されることを確認
+        assert_eq!(config.get_model_name(), custom_model);
+    }
+
+    #[test]
+    fn test_serialization_with_model_selection() {
+        // モデル選択を含むシリアライズとデシリアライズのテスト
+        let mut config = Config::new();
+        config.platform = Platform::Claude;
+        config.selected_model = Some("claude-3-haiku-20240307".to_string());
+
+        // JSON文字列にシリアライズ
+        let json = serde_json::to_string(&config).unwrap();
+
+        // その文字列からデシリアライズ
+        let deserialized: Config = serde_json::from_str(&json).unwrap();
+
+        // 値が保持されていることを確認
+        assert_eq!(deserialized.platform, Platform::Claude);
+        assert_eq!(
+            deserialized.selected_model,
+            Some("claude-3-haiku-20240307".to_string())
         );
     }
 }

@@ -2,13 +2,36 @@
 
 A [Rust](https://www.rust-lang.org/) CLI tool that analyzes staged Git changes and automatically generates optimal commit messages using AI.
 
-[![Changelog](https://img.shields.io/badge/changelog-v0.0.2-green.svg)](https://github.com/hiraishikentaro/ai_commit_cli/blob/master/CHANGELOG.md)
+[![Changelog](https://img.shields.io/badge/changelog-v0.0.3-green.svg)](https://github.com/hiraishikentaro/ai_commit_cli/blob/master/CHANGELOG.md)
 
 ## Supported AI Platforms
 
 - Claude (Anthropic)
 - GPT-4 (OpenAI)
 - Gemini (Google)
+
+## Available Models
+
+Each AI platform offers multiple models with different capabilities and costs:
+
+### Claude (Anthropic)
+
+- Claude 3.7 Sonnet
+- Claude 3.5 Sonnet
+- Claude 3.5 Haiku
+
+### OpenAI
+
+- o4-mini
+- GPT-4.1
+- o3-mini
+- o3
+
+### Gemini
+
+- Gemini 2.5 Flash
+- Gemini 2.5 Pro
+- Gemini 2.0 Flash
 
 ## Prerequisites
 
@@ -91,6 +114,26 @@ Using the config command, you can choose from the following AI platforms:
 1. Claude (Anthropic)
 2. GPT-4 (OpenAI)
 3. Gemini (Google)
+
+When selecting a platform, you'll also be prompted to choose a specific model from that platform. Each platform offers different models with varying capabilities and performance.
+
+### Model Selection
+
+During configuration (`aic config --api`), after selecting the AI platform, you'll be prompted to choose a specific model for that platform.
+
+Different models offer trade-offs between:
+
+- Quality of generated commit messages
+- Speed of response
+- Cost (API usage)
+
+You can change your model selection at any time by running the configuration again:
+
+```
+aic config --api
+```
+
+Your model selection will be saved in the configuration file and used for all future commit message generations.
 
 ### Commit Message Language
 

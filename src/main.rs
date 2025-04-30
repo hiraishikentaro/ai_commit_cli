@@ -73,6 +73,7 @@ async fn generate_commit_message(diff: &str) -> Result<String> {
     let api_key = config.get_api_key()?;
     let language = config.language;
     let platform = config.platform;
+    let model = config.get_model_name();
 
     // システムプロンプトと言語に応じたユーザープロンプトを取得
     let system_prompt = match &config.custom_prompt {
@@ -94,14 +95,7 @@ async fn generate_commit_message(diff: &str) -> Result<String> {
     };
 
     // APIモジュールを使用してコミットメッセージを生成
-    api::generate_commit_message(
-        platform,
-        &api_key,
-        platform.model_name(),
-        system_prompt,
-        &user_prompt,
-    )
-    .await
+    api::generate_commit_message(platform, &api_key, &model, system_prompt, &user_prompt).await
 }
 
 async fn commit_with_message(message: &str) -> Result<()> {
@@ -150,11 +144,12 @@ async fn main() -> Result<()> {
         return Ok(());
     }
 
-    // 設定を読み込み、使用するAIプラットフォームを表示
+    // 設定を読み込み、使用するAIプラットフォームとモデルを表示
     let config = Config::load()?;
     println!(
-        "Generating commit message using {}...",
-        config.platform.as_str()
+        "Generating commit message using {} ({})",
+        config.platform.as_str(),
+        config.get_model_name()
     );
 
     // コミットメッセージの生成
